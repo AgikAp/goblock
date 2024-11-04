@@ -1,0 +1,16 @@
+# IDE / Editor configurations
+.idea/
+.vscode/
+
+# Binary files
+bin/
+
+# Test directory
+test/
+
+# Cache, test results, and profiling
+*.out
+*.prof
+
+# Log files
+*.log
