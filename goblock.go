@@ -20,7 +20,7 @@ func New() *GoBlock {
 	return g
 }
 
-func (g *GoBlock) handlerRequest(c *Context) {
+func (g *GoBlock) handleRequest(c *Context) {
 	c.Json(200, map[string]interface{}{
 		"message": "Hello, World",
 	})
@@ -38,7 +38,7 @@ func (g *GoBlock) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := g.pool.Get().(*Context)
 
 	c.reset(w, r)
-	g.handlerRequest(c)
+	g.handleRequest(c)
 
 	g.pool.Put(c)
 }
