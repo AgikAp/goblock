@@ -1,7 +1,6 @@
 package goblock
 
 import (
-	"log"
 	"strings"
 )
 
@@ -60,28 +59,30 @@ func (t *RouterTree) Search(method string, path string) (*Route, error) {
 	params := make(map[string]string, len(parts))
 
 	paramCounter := 0
-	for _, part := range parts {
+	for i, part := range parts {
 		if child, exists := node.children[part]; exists {
 			node = child
 		} else if node.param != nil {
 			node = node.param
-			paramNames := node.val[method].paramNames
 
-			if paramCounter < len(paramNames) {
-				params[paramNames[paramCounter]] = part
-				paramCounter++
+			if paramNode, exists := node.val[method]; exists {
+				paramNames := paramNode.paramNames
+				if paramCounter < len(paramNames) {
+					params[paramNames[paramCounter]] = part
+					paramCounter++
+				}
+			} else if i == len(parts)-1 {
+				return nil, NewHttpError(405, "Method not allowed", nil)
 			}
 		} else {
 			return nil, NewHttpError(404, "Resource not found", nil)
 		}
 	}
 
-	log.Println(node.val)
-
 	if route, exists := node.val[method]; exists {
 		route.params = params
 		return route, nil
 	}
 
-	return nil, NewHttpError(405, "Resource not allowed", nil)
+	return nil, NewHttpError(404, "Resource not found", nil)
 }

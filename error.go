@@ -12,7 +12,7 @@ func NewHttpError(statusCode int, message interface{}, previous error) *HttpErro
 	return &HttpError{statusCode, message, previous}
 }
 
-func (e *HttpError) Error() string {
+func (e HttpError) Error() string {
 	if e.Previous != nil {
 		return fmt.Sprintf("statusCode=%d, message=%v, previous=%v", e.StatusCode, e.Message, e.Previous)
 	}

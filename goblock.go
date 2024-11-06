@@ -71,20 +71,33 @@ func (g *GoBlock) registerRoute(method string, path string, handlers []HandlerFu
 func (g *GoBlock) handleRequest(c *Context) {
 	start := time.Now()
 
+	defer func() {
+		if r := recover(); r != nil {
+			switch err := r.(type) {
+			case *HttpError:
+				c.Json(err.StatusCode, G{
+					"message": err.Message,
+				})
+			default:
+				c.Json(http.StatusInternalServerError, G{
+					"message": "Internal server error",
+				})
+			}
+		}
+	}()
+
 	method := c.Request.Method
 	path := c.Request.URL.Path
 
 	route, err := g.routes.Search(method, path)
 	if err != nil {
-		c.Json(500, G{
-			"message": err.Error(),
-		})
-	} else {
-		c.setParams(route.params)
+		panic(err)
+	}
 
-		for _, handler := range route.handlers {
-			handler(c)
-		}
+	c.setParams(route.params)
+
+	for _, handler := range route.handlers {
+		handler(c)
 	}
 
 	logRequest(method, path, c.Writer.statusCode, time.Since(start))
