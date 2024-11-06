@@ -5,42 +5,39 @@ import (
 	"net/http"
 )
 
-type context interface {
-	GetWriter() http.ResponseWriter
-
-	GetRequest() *http.Request
-
-	Json(statusCode int, data map[string]interface{})
-}
-
 type Context struct {
-	writer  http.ResponseWriter
-	request *http.Request
+	Request *http.Request
+	Writer  *ResponseWriter
+	params  map[string]string
 }
 
 func NewContext() *Context {
 	return &Context{}
 }
 
-func (c *Context) reset(w http.ResponseWriter, r *http.Request) {
-	c.writer = w
-	c.request = r
-}
-
-func (c *Context) GetWriter() http.ResponseWriter {
-	return c.writer
-}
-
-func (c *Context) GetRequest() *http.Request {
-	return c.request
-}
-
-func (c *Context) Json(statusCode int, data map[string]interface{}) {
-	c.writer.Header().Set("Content-Type", "application/json")
-	c.writer.WriteHeader(statusCode)
-
-	err := json.NewEncoder(c.writer).Encode(data)
+func (c *Context) HandleError(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (c *Context) Param(key string) string {
+	return c.params[key]
+}
+
+func (c *Context) Json(statusCode int, data map[string]interface{}) {
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(statusCode)
+
+	err := json.NewEncoder(c.Writer).Encode(data)
+	c.HandleError(err)
+}
+
+func (c *Context) setParams(params map[string]string) {
+	c.params = params
+}
+
+func (c *Context) reset(w http.ResponseWriter, r *http.Request) {
+	c.Writer = NewResponseWriter(w)
+	c.Request = r
 }

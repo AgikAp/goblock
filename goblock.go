@@ -6,32 +6,35 @@ import (
 	"time"
 )
 
-type GoBlock struct {
-	pool sync.Pool
+type HandlerFunc func(*Context)
+
+type Config struct {
 }
 
-func New() *GoBlock {
-	g := &GoBlock{}
+type GoBlock struct {
+	RouterGroup
+
+	pool   sync.Pool
+	routes *RouterTree
+}
+
+func New(config ...Config) *GoBlock {
+	g := &GoBlock{
+		RouterGroup: RouterGroup{
+			path:     "/",
+			handlers: nil,
+		},
+	}
+
+	g.RouterGroup.goBlock = g
+	g.RouterGroup.rootGroup = true
 
 	g.pool.New = func() interface{} {
 		return NewContext()
 	}
+	g.routes = NewRouterTree()
 
 	return g
-}
-
-func (g *GoBlock) handleRequest(c *Context) {
-	c.Json(200, map[string]interface{}{
-		"message": "Hello, World",
-	})
-}
-
-func (g *GoBlock) loggerMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		logRequest(r.Method, r.URL.Path, time.Since(start))
-	})
 }
 
 func (g *GoBlock) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +47,7 @@ func (g *GoBlock) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *GoBlock) Handler() http.Handler {
-	return g.loggerMiddleware(g)
+	return g
 }
 
 func (g *GoBlock) Listen(addr string) (err error) {
@@ -59,4 +62,30 @@ func (g *GoBlock) ListenTLS(addr string, certFile string, keyFile string) (err e
 
 	err = http.ListenAndServeTLS(addr, certFile, keyFile, g.Handler())
 	return
+}
+
+func (g *GoBlock) registerRoute(method string, path string, handlers []HandlerFunc) {
+	g.routes.Insert(method, path, handlers)
+}
+
+func (g *GoBlock) handleRequest(c *Context) {
+	start := time.Now()
+
+	method := c.Request.Method
+	path := c.Request.URL.Path
+
+	route, err := g.routes.Search(method, path)
+	if err != nil {
+		c.Json(500, G{
+			"message": err.Error(),
+		})
+	} else {
+		c.setParams(route.params)
+
+		for _, handler := range route.handlers {
+			handler(c)
+		}
+	}
+
+	logRequest(method, path, c.Writer.statusCode, time.Since(start))
 }

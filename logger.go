@@ -20,7 +20,7 @@ func printLogo() {
 	fmt.Printf("%s\n\n", logo)
 }
 
-func logRequest(method string, path string, duration time.Duration) {
+func logRequest(method string, path string, statusCode int, duration time.Duration) {
 	yellow := color.New(color.FgYellow).SprintFunc()
 
 	totalLength := 100
@@ -31,7 +31,19 @@ func logRequest(method string, path string, duration time.Duration) {
 		dots = 0
 	}
 
-	log.Printf("%s %s %s", formattedLog, repeatString(".", dots), yellow(duration))
+	log.Printf("%s %s %s %s", formattedLog, repeatString(".", dots), writeStatusCode(statusCode), yellow(duration))
+}
+
+func writeStatusCode(statusCode int) string {
+	var colorCode func(a ...interface{}) string
+
+	if statusCode >= 400 && statusCode < 599 {
+		colorCode = color.New(color.FgRed).SprintFunc()
+	} else {
+		colorCode = color.New(color.FgGreen).SprintFunc()
+	}
+
+	return colorCode(fmt.Sprintf("%d", statusCode))
 }
 
 func repeatString(s string, count int) string {
